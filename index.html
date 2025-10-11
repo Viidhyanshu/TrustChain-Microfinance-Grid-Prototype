@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TrustChain Microfinance Grid — Prototype</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="weave.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">TC</div>
+      <div>
+        <h1>TrustChain Microfinance Grid</h1>
+        <div class="small">Prototype · multi-layer ledger · smart-contract simulation</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="small">Layer</div>
+      <select id="layerSelect">
+        <option value="public">Public (Transparent)</option>
+        <option value="permissioned">Permissioned (MFI)</option>
+        <option value="sidechain">Sidechain (Private)</option>
+      </select>
+      <div class="small">Role</div>
+      <select id="roleSelect">
+        <option value="borrower">Borrower</option>
+        <option value="lender">Lender</option>
+        <option value="regulator">Regulator</option>
+        <option value="analyst">Analyst</option>
+      </select>
+      <button id="syncBtn" class="btn secondary">Sync Pending</button>
+      <button id="resetBtn" class="btn">Reset</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel">
+      <div class="small center">
+        <div class="chip">Offline-ready </div>
+        <div class="chip">ZK disputes </div>
+        <div class="chip">Biometric/Voice (sim)</div>
+      </div>
+
+      <h3 style="margin-top:12px">User Onboarding</h3>
+      <div class="small">Create user (simulate biometric/voice/USSD) — keys stored locally</div>
+      <label>Name</label><input id="uName" placeholder="e.g. Vardaan"/>
+      <label>Phone</label><input id="uPhone" placeholder="e.g. *99*1234# (sim)"/>
+      <label>Village / Region</label><input id="uRegion" placeholder="e.g. Sitapur"/>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="createUserBtn" class="btn">Create User</button>
+        <button id="bioBtn" class="btn secondary">Biometric (Sim)</button>
+        <button id="voiceBtn" class="btn secondary">Voice Auth (Sim)</button>
+      </div>
+
+      <div id="userCard" style="margin-top:12px;display:none">
+        <h4>User Profile</h4>
+        <div id="userId" class="small"></div>
+        <div id="userName" class="big"></div>
+        <div class="small" id="userReg"></div>
+        <div style="margin-top:8px"><span class="chip">TrustScore: <b id="trustScore">—</b></span></div>
+      </div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)"/>
+
+      <h3>Loan Request (Borrower)</h3>
+      <div class="small">Simulate a loan request — smart contract triggers when lender approves.</div>
+      <label>Loan Amount (INR)</label><input id="loanAmt" type="number" placeholder="5000"/>
+      <label>Tenure (months)</label><input id="loanTenure" type="number" placeholder="6"/>
+      <label>Purpose</label><input id="loanPurpose" placeholder="Seeds / Livestock"/>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="requestLoan" class="btn">Request Loan</button>
+        <button id="ussdBtn" class="btn secondary">USSD Sim</button>
+      </div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)"/>
+      <div class="small">Offline queue: <span id="pendingCount">0</span></div>
+    </aside>
+
+    <main class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Layer Ledger & Smart Contract</h3>
+        <div class="small">Active Layer: <b id="activeLayer">public</b></div>
+      </div>
+
+      <div id="ledger" class="panel" style="margin-top:8px;">
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:12px;align-items:center">
+        <button id="mineBtn" class="btn">Produce Block (Mine)</button>
+        <button id="verifyZk" class="btn secondary">Verify (ZK Demo)</button>
+        <div class="small">Last block: <span id="lastBlock">—</span></div>
+      </div>
+
+      <h3 style="margin-top:18px">Smart Contract (Loan)</h3>
+      <div class="small">Contract state machine: REQUEST → APPROVED → DISBURSED → REPAY → CLOSED</div>
+      <div style="margin-top:8px" id="contractView"></div>
+
+    </main>
+
+    <section class="panel">
+      <h3>Unified Feed & Analytics</h3>
+
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div class="stat">
+          <div class="small">Total Loans</div><div id="statLoans" class="big">0</div>
+        </div>
+        <div class="stat">
+          <div class="small">Active Borrowers</div><div id="statBorrowers" class="big">0</div>
+        </div>
+      </div>
+
+      <div style="height:220px">
+        <canvas id="loanChart"></canvas>
+      </div>
+
+      <h4 style="margin-top:12px">Unified Feed</h4>
+      <div id="feed" style="max-height:260px;overflow:auto;padding:6px;background:rgba(0,0,0,0.06);border-radius:8px"></div>
+
+      <h4 style="margin-top:12px">NLP: Detect Risk Keywords</h4>
+      <textarea id="nlpInput" rows="4" placeholder="Paste example social/field notes — one per line" style="width:100%;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.03);border-radius:8px;padding:8px"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="ingestNlp" class="btn secondary">Ingest</button>
+        <button id="analyzeBtn" class="btn">Analyze</button>
+      </div>
+
+    </section>
+  </div>
+
+  <footer>Prototype by Team Wisdom Weave </footer>
+
+<script src="wisdom.js" ></script>
+</body>
+</html>
