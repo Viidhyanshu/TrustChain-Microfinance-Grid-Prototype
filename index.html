@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>TrustChain Microfinance Grid — Prototype</title>
+<title>TrustChain Microfinance Grid Prototype</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
@@ -12,7 +12,7 @@
 <body>
   <header>
     <div class="brand">
-      <div class="logo">TC</div>
+      <div class="logo">T</div>
       <div>
         <h1>TrustChain Microfinance Grid</h1>
         <div class="small">Prototype · multi-layer ledger · smart-contract simulation</div>
@@ -22,9 +22,9 @@
     <div class="top-actions">
       <div class="small">Layer</div>
       <select id="layerSelect">
-        <option value="public">Public (Transparent)</option>
-        <option value="permissioned">Permissioned (MFI)</option>
-        <option value="sidechain">Sidechain (Private)</option>
+        <option value="public">Public</option>
+        <option value="permissioned">Permissioned</option>
+        <option value="sidechain">Sidechain</option>
       </select>
       <div class="small">Role</div>
       <select id="roleSelect">
@@ -41,20 +41,20 @@
   <div class="layout">
     <aside class="panel">
       <div class="small center">
-        <div class="chip">Offline-ready </div>
-        <div class="chip">ZK disputes </div>
-        <div class="chip">Biometric/Voice (sim)</div>
+        <div class="chip">Offline-ready</div>
+        <div class="chip">ZK disputes</div>
+        <div class="chip">Biometric/Voice Auth</div>
       </div>
 
       <h3 style="margin-top:12px">User Onboarding</h3>
-      <div class="small">Create user (simulate biometric/voice/USSD) — keys stored locally</div>
+      <div class="small">Create user (simulate biometric/voice/USSD) keys stored locally</div>
       <label>Name</label><input id="uName" placeholder="e.g. Vardaan"/>
-      <label>Phone</label><input id="uPhone" placeholder="e.g. *99*1234# (sim)"/>
-      <label>Village / Region</label><input id="uRegion" placeholder="e.g. Sitapur"/>
+      <label>Phone</label><input id="uPhone" placeholder="e.g. 9999999999"/>
+      <label>Village / Region</label><input id="uRegion" placeholder="e.g. Jaipur"/>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button id="createUserBtn" class="btn">Create User</button>
-        <button id="bioBtn" class="btn secondary">Biometric (Sim)</button>
-        <button id="voiceBtn" class="btn secondary">Voice Auth (Sim)</button>
+        <button id="bioBtn" class="btn secondary">Biometric</button>
+        <button id="voiceBtn" class="btn secondary">Voice Auth</button>
       </div>
 
       <div id="userCard" style="margin-top:12px;display:none">
@@ -68,7 +68,7 @@
       <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)"/>
 
       <h3>Loan Request (Borrower)</h3>
-      <div class="small">Simulate a loan request — smart contract triggers when lender approves.</div>
+      <div class="small">Simulate a loan request smart contract triggers when lender approves.</div>
       <label>Loan Amount (INR)</label><input id="loanAmt" type="number" placeholder="5000"/>
       <label>Tenure (months)</label><input id="loanTenure" type="number" placeholder="6"/>
       <label>Purpose</label><input id="loanPurpose" placeholder="Seeds / Livestock"/>
@@ -91,9 +91,9 @@
       </div>
 
       <div style="display:flex;gap:12px;margin-top:12px;align-items:center">
-        <button id="mineBtn" class="btn">Produce Block (Mine)</button>
-        <button id="verifyZk" class="btn secondary">Verify (ZK Demo)</button>
-        <div class="small">Last block: <span id="lastBlock">—</span></div>
+        <button id="mineBtn" class="btn">Produce Block</button>
+        <button id="verifyZk" class="btn secondary">Verify</button>
+       
       </div>
 
       <h3 style="margin-top:18px">Smart Contract (Loan)</h3>
@@ -122,7 +122,7 @@
       <div id="feed" style="max-height:260px;overflow:auto;padding:6px;background:rgba(0,0,0,0.06);border-radius:8px"></div>
 
       <h4 style="margin-top:12px">NLP: Detect Risk Keywords</h4>
-      <textarea id="nlpInput" rows="4" placeholder="Paste example social/field notes — one per line" style="width:100%;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.03);border-radius:8px;padding:8px"></textarea>
+      <textarea id="nlpInput" rows="4" placeholder="Paste example social/field notes one per line" style="width:100%;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.03);border-radius:8px;padding:8px"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button id="ingestNlp" class="btn secondary">Ingest</button>
         <button id="analyzeBtn" class="btn">Analyze</button>
