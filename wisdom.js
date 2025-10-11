@@ -3,13 +3,28 @@ const LAYER_KEYS = {
   permissioned: 'tc_permissioned_v1',
   sidechain: 'tc_sidechain_v1'
 };
-function loadLayer(layer){ return JSON.parse(localStorage.getItem(LAYER_KEYS[layer])||'{"blocks":[],"pending":[]}'); }
-function saveLayer(layer,data){ localStorage.setItem(LAYER_KEYS[layer], JSON.stringify(data)); }
+
+function loadLayer(layer){
+  try {
+    return JSON.parse(localStorage.getItem(LAYER_KEYS[layer])||'{"blocks":[],"pending":[]}');
+  } catch(e) {
+    console.error("Load layer error:", e);
+    return {blocks:[], pending:[]};
+  }
+}
+function saveLayer(layer,data){
+  try {
+    localStorage.setItem(LAYER_KEYS[layer], JSON.stringify(data));
+  } catch(e) {
+    console.error("Save layer error:", e);
+  }
+}
 
 function bootstrap(){
   ['public','permissioned','sidechain'].forEach(layer=>{
     const d = loadLayer(layer);
-    if(!d.blocks || !Array.isArray(d.blocks)){ d.blocks = []; d.pending = []; saveLayer(layer,d); }
+    if(!d.blocks || !Array.isArray(d.blocks)){ d.blocks = []; d.pending = []; }
+    saveLayer(layer,d);
   });
 }
 bootstrap();
@@ -17,22 +32,26 @@ bootstrap();
 let currentUser = null;
 let activeLayer = 'public';
 
-
-const layerSelect = document.getElementById('layerSelect');
-const roleSelect = document.getElementById('roleSelect');
-const userCard = document.getElementById('userCard');
-const userIdEl = document.getElementById('userId');
-const userNameEl = document.getElementById('userName');
-const userRegEl = document.getElementById('userReg');
-const trustScoreEl = document.getElementById('trustScore');
-const pendingCountEl = document.getElementById('pendingCount');
-const ledgerEl = document.getElementById('ledger');
-const contractView = document.getElementById('contractView');
-const activeLayerEl = document.getElementById('activeLayer');
-const feedEl = document.getElementById('feed');
-const statLoans = document.getElementById('statLoans');
-const statBorrowers = document.getElementById('statBorrowers');
-const lastBlockEl = document.getElementById('lastBlock');
+function getEl(id) {
+  const el = document.getElementById(id);
+  if(!el) console.warn('Missing DOM element:', id);
+  return el;
+}
+const layerSelect = getEl('layerSelect');
+const roleSelect = getEl('roleSelect');
+const userCard = getEl('userCard');
+const userIdEl = getEl('userId');
+const userNameEl = getEl('userName');
+const userRegEl = getEl('userReg');
+const trustScoreEl = getEl('trustScore');
+const pendingCountEl = getEl('pendingCount');
+const ledgerEl = getEl('ledger');
+const contractView = getEl('contractView');
+const activeLayerEl = getEl('activeLayer');
+const feedEl = getEl('feed');
+const statLoans = getEl('statLoans');
+const statBorrowers = getEl('statBorrowers');
+const lastBlockEl = getEl('lastBlock');
 
 function genId(prefix='u'){ return prefix + Math.random().toString(36).slice(2,10); }
 
@@ -65,6 +84,7 @@ function getAllReports(){
 }
 
 function renderLedger(){
+  if(!ledgerEl || !lastBlockEl) return;
   ledgerEl.innerHTML = '';
   const d = getLayerData(activeLayer);
   if(d.blocks.length===0){
@@ -72,7 +92,6 @@ function renderLedger(){
     lastBlockEl.textContent = '—';
     return;
   }
-  
   const blocks = [...d.blocks].reverse().slice(0,10);
   blocks.forEach(b=>{
     const row = document.createElement('div'); row.className='row';
@@ -85,8 +104,8 @@ function renderLedger(){
   lastBlockEl.textContent = d.blocks[d.blocks.length-1].index;
 }
 
-
 function renderFeed(){
+  if(!feedEl) return;
   const all = getAllReports().sort((a,b)=> (b.ts||0)-(a.ts||0)).slice(0,100);
   feedEl.innerHTML = '';
   all.forEach(r=>{
@@ -95,7 +114,6 @@ function renderFeed(){
     box.appendChild(meta);
     const txt = document.createElement('div'); txt.style.marginTop='6px'; txt.textContent = r.desc || r.note || JSON.stringify(r.data||'');
     box.appendChild(txt);
-    
     if(r.media && r.media.length){
       const mcont = document.createElement('div'); mcont.className='feed-media';
       r.media.forEach(m=>{
@@ -132,7 +150,7 @@ function createLoanRequest({userId,amount,tenure,purpose}){
     action:'REQUEST_LOAN',
     type:'loan',
     userId, amount, tenure, purpose,
-    state:'REQUESTED', // contract state
+    state:'REQUESTED',
     ts: Date.now(),
     layer: activeLayer
   };
@@ -141,7 +159,7 @@ function createLoanRequest({userId,amount,tenure,purpose}){
 }
 
 function contractAction(txId, action, extra={}){
- const tx = {
+  const tx = {
     id: 'tx'+Date.now()+Math.random().toString(36).slice(2,6),
     orig: txId,
     action,
@@ -153,9 +171,8 @@ function contractAction(txId, action, extra={}){
   renderFeed(); renderLedger(); renderCharts();
 }
 
-
 function verifyZK(){
-  const proofOk = Math.random()>0.2; 
+  const proofOk = Math.random()>0.2;
   alert('Zero-Knowledge Check result: ' + (proofOk ? 'Proof Verified no borrower PII disclosed' : 'Proof Failed escalate to dispute resolution'));
 }
 
@@ -163,7 +180,6 @@ function syncPendingAll(){
   ['public','permissioned','sidechain'].forEach(layer=>{
     const d = loadLayer(layer);
     if(d.pending && d.pending.length){
-      
       const index = (d.blocks.length||0)+1; const ts = Date.now(); const txs = d.pending.splice(0,d.pending.length);
       const block = { index, ts, txs, prev: d.blocks.length? d.blocks[d.blocks.length-1].hash : '0', hash: fakeHash(JSON.stringify({index,ts,txs})) };
       d.blocks.push(block);
@@ -174,19 +190,20 @@ function syncPendingAll(){
   alert('All pending transactions committed (simulated).');
 }
 
-
 let loanChart = null;
 function renderCharts(){
+  if(!statLoans || !statBorrowers) return;
   const all = getAllReports();
   const loans = all.filter(r=> r.action==='REQUEST_LOAN' || r.type==='loan' || r.action==='REQUEST_LOAN' || (r.action && r.action.includes('LOAN')) || (r.amount));
-  
   const counts = { public:0, permissioned:0, sidechain:0 };
   all.forEach(r=>{ counts[r.layer] = (counts[r.layer]||0)+1; });
   statLoans.textContent = loans.length;
   const users = new Set(all.map(r=> r.userId||r.user)).size;
   statBorrowers.textContent = users;
 
-  const ctx = document.getElementById('loanChart').getContext('2d');
+  const chartCanvas = getEl('loanChart');
+  if(!chartCanvas) return;
+  const ctx = chartCanvas.getContext('2d');
   const data = {
     labels: ['Public','Permissioned','Sidechain'],
     datasets: [{label:'Tx Count',data:[counts.public,counts.permissioned,counts.sidechain],backgroundColor:['#1fb6ff','#24c58b','#ffcc00']}]
@@ -195,7 +212,6 @@ function renderCharts(){
   loanChart = new Chart(ctx, { type:'bar', data, options:{responsive:true,plugins:{legend:{display:false}}}});
 }
 
-
 const RISK_KEYWORDS = ['default','late','fraud','fake','evade','dispute','overdue','repay','loan shark'];
 function ingestNlp(text){
   const lines = text.split(/\n+/).map(s=>s.trim()).filter(Boolean);
@@ -203,7 +219,6 @@ function ingestNlp(text){
     const found = RISK_KEYWORDS.filter(k=> line.toLowerCase().includes(k));
     return { line, risk: found.length>0, matches:found };
   });
-  
   results.forEach((r,i)=>{
     const tx = { id:'soc'+Date.now()+i, action:'SOCIAL_INGEST', desc: r.line, matches: r.matches, ts:Date.now(), layer:'public' };
     addPendingTx('public', tx);
@@ -212,101 +227,98 @@ function ingestNlp(text){
   return results;
 }
 
-
-document.getElementById('createUserBtn').addEventListener('click', ()=>{
-  const name = document.getElementById('uName').value.trim();
-  const phone = document.getElementById('uPhone').value.trim();
-  const region = document.getElementById('uRegion').value.trim();
+// Event listeners (add existence checks)
+getEl('createUserBtn')?.addEventListener('click', ()=>{
+  const name = getEl('uName').value.trim();
+  const phone = getEl('uPhone').value.trim();
+  const region = getEl('uRegion').value.trim();
   if(!name || !phone){ alert('Provide name & phone to create a user (sim).'); return; }
   currentUser = { id: genId('user'), name, phone, region, created:Date.now() };
-  
+
   localStorage.setItem('tc_user_'+currentUser.id, JSON.stringify(currentUser));
 
-  userCard.style.display='block';
-  userIdEl.textContent = currentUser.id;
-  userNameEl.textContent = currentUser.name;
-  userRegEl.textContent = currentUser.region + ' · ' + currentUser.phone;
-  trustScoreEl.textContent = computeTrustScore(currentUser.id);
+  if(userCard) userCard.style.display='block';
+  if(userIdEl) userIdEl.textContent = currentUser.id;
+  if(userNameEl) userNameEl.textContent = currentUser.name;
+  if(userRegEl) userRegEl.textContent = currentUser.region + ' · ' + currentUser.phone;
+  if(trustScoreEl) trustScoreEl.textContent = computeTrustScore(currentUser.id);
   alert('User created (sim): ' + currentUser.id);
 });
 
-document.getElementById('bioBtn').addEventListener('click', ()=> {
+getEl('bioBtn')?.addEventListener('click', ()=> {
   if(!currentUser) return alert('Create a user first.');
-  
   alert('Biometric check (sim) succeeded for ' + currentUser.name);
 });
 
-document.getElementById('voiceBtn').addEventListener('click', ()=> {
+getEl('voiceBtn')?.addEventListener('click', ()=> {
   if(!currentUser) return alert('Create a user first.');
   alert('Voice authentication (sim) succeeded for ' + currentUser.name);
 });
 
-document.getElementById('ussdBtn').addEventListener('click', ()=> {
+getEl('ussdBtn')?.addEventListener('click', ()=> {
   alert('USSD path simulated: *99*' + Math.floor(Math.random()*9000+1000));
 });
 
-document.getElementById('requestLoan').addEventListener('click', ()=>{
+getEl('requestLoan')?.addEventListener('click', ()=>{
   if(!currentUser) return alert('Please create profile first.');
-  const amount = Number(document.getElementById('loanAmt').value)||0;
-  const tenure = Number(document.getElementById('loanTenure').value)||0;
-  const purpose = document.getElementById('loanPurpose').value.trim();
+  const amount = Number(getEl('loanAmt').value)||0;
+  const tenure = Number(getEl('loanTenure').value)||0;
+  const purpose = getEl('loanPurpose').value.trim();
   if(amount<=0 || tenure<=0){ alert('Enter amount and tenure'); return; }
   createLoanRequest({ userId: currentUser.id, amount, tenure, purpose, desc:`Loan request ${amount} INR for ${purpose}` });
   alert('Loan request submitted to layer: ' + activeLayer);
-  pendingCountEl.textContent = loadLayer(activeLayer).pending.length;
+  if(pendingCountEl) pendingCountEl.textContent = loadLayer(activeLayer).pending.length;
 });
 
+getEl('syncBtn')?.addEventListener('click', ()=> { syncPendingAll(); if(pendingCountEl) pendingCountEl.textContent = 0; });
 
-document.getElementById('syncBtn').addEventListener('click', ()=> { syncPendingAll(); pendingCountEl.textContent = 0; });
+getEl('mineBtn')?.addEventListener('click', ()=> { produceBlock(); if(pendingCountEl) pendingCountEl.textContent = loadLayer(activeLayer).pending.length; });
 
-document.getElementById('mineBtn').addEventListener('click', ()=> { produceBlock(); pendingCountEl.textContent = loadLayer(activeLayer).pending.length; });
+getEl('verifyZk')?.addEventListener('click', ()=> { verifyZK(); });
 
-document.getElementById('verifyZk').addEventListener('click', ()=> { verifyZK(); });
+layerSelect?.addEventListener('change', (e)=> {
+  activeLayer = e.target.value;
+  if(activeLayerEl) activeLayerEl.textContent = activeLayer;
+  renderLedger();
+  if(pendingCountEl) pendingCountEl.textContent = loadLayer(activeLayer).pending.length;
+});
 
-document.getElementById('layerSelect').addEventListener('change', (e)=> { activeLayer = e.target.value; activeLayerEl.textContent = activeLayer; renderLedger(); pendingCountEl.textContent = loadLayer(activeLayer).pending.length; });
-
-document.getElementById('roleSelect').addEventListener('change', (e)=>{
- 
+roleSelect?.addEventListener('change', (e)=>{
   const role = e.target.value;
-  if(role==='lender') document.getElementById('mineBtn').classList.remove('hidden');
+  if(role==='lender') getEl('mineBtn')?.classList.remove('hidden');
 });
 
-
-document.getElementById('ingestNlp').addEventListener('click', ()=>{
-  const txt = document.getElementById('nlpInput').value.trim();
+getEl('ingestNlp')?.addEventListener('click', ()=>{
+  const txt = getEl('nlpInput').value.trim();
   if(!txt) return alert('Paste some social notes or posts first.');
   const results = ingestNlp(txt);
   alert('Ingested ' + results.length + ' items into public layer.');
 });
 
-document.getElementById('analyzeBtn').addEventListener('click', ()=>{
- 
-  const res = ingestNlp(document.getElementById('nlpInput').value || '');
+getEl('analyzeBtn')?.addEventListener('click', ()=>{
+  const res = ingestNlp(getEl('nlpInput').value || '');
   const risky = res.filter(r=> r.risk );
   alert('Analysis done. Risky mentions: ' + risky.length);
 });
 
-
-document.getElementById('resetBtn').addEventListener('click', ()=>{
+getEl('resetBtn')?.addEventListener('click', ()=>{
   if(!confirm('Reset demo storage?')) return;
   ['public','permissioned','sidechain'].forEach(k=> localStorage.removeItem(LAYER_KEYS[k]));
   localStorage.removeItem('tc_user_'+(currentUser && currentUser.id));
   location.reload();
 });
 
-
 (function boot(){
-  activeLayer = layerSelect.value;
-  activeLayerEl.textContent = activeLayer;
+  activeLayer = layerSelect?.value || 'public';
+  if(activeLayerEl) activeLayerEl.textContent = activeLayer;
   renderLedger(); renderFeed(); renderCharts();
-  pendingCountEl.textContent = loadLayer(activeLayer).pending.length;
+  if(pendingCountEl) pendingCountEl.textContent = loadLayer(activeLayer).pending.length;
 })();
 
-
 function renderContractView(){
+  if(!contractView) return;
   const d = getLayerData(activeLayer);
   const txs = (d.blocks||[]).flatMap(b=>b.txs).concat(d.pending||[]);
-  
   const loanRequests = txs.filter(t=> t.action==='REQUEST_LOAN' || t.type==='loan' || t.action==='REQUEST_LOAN' || t.amount);
   if(loanRequests.length===0){ contractView.innerHTML='<div class="small">No contracts yet on this layer.</div>'; return; }
   contractView.innerHTML = '';
@@ -325,4 +337,7 @@ function renderContractView(){
   });
 }
 
-setInterval(()=>{ renderLedger(); renderFeed(); renderCharts(); renderContractView(); pendingCountEl.textContent = loadLayer(activeLayer).pending.length; }, 1500);
+setInterval(()=>{
+  renderLedger(); renderFeed(); renderCharts(); renderContractView();
+  if(pendingCountEl) pendingCountEl.textContent = loadLayer(activeLayer).pending.length;
+}, 1500);
