@@ -11,8 +11,6 @@
 
 TrustChain Microfinance Grid is a fully functional blockchain prototype designed to revolutionize India's rural microfinance ecosystem. This interactive web application demonstrates a complete microfinance workflow with multi-layer blockchain architecture, smart contract automation, trust scoring, and real-time analytics - all running directly in your browser.
 
-**Built by Team Wisdom Weave** 🌾
-
 ## 🎯 Mission
 
 To develop a trust-based microfinance infrastructure that is:
